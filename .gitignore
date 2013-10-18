@@ -1,0 +1,9 @@
+.metadata
+
+# Eclipse project files
+KnelpuntenAnalyzer/.classpath
+KnelpuntenAnalyzer/.project
+KnelpuntenAnalyzer/.settings
+
+# Java output files
+*.class
