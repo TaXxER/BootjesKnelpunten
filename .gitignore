@@ -7,3 +7,6 @@ KnelpuntenAnalyzer/.settings
 
 # Java output files
 *.class
+
+# LocalSettings
+LocalSettings.java
