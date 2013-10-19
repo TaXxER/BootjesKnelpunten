@@ -2,15 +2,13 @@ package nonDbApproach;
 
 public class AisData {
 	private Long unixTime;
-	private float latitude;
-	private float longtitude;
+	private Location location;
 	
-	public AisData(Long unixTime, float latitude, float longtitude){
+	public AisData(Long unixTime, Location location){
 		this.unixTime 	= unixTime;
-		this.latitude 	= latitude;
-		this.longtitude = longtitude;
+		this.location   = location;
 	}
-
+	
 	public Long getUnixTime() {
 		return unixTime;
 	}
@@ -19,20 +17,8 @@ public class AisData {
 		this.unixTime = unixTime;
 	}
 
-	public float getLatitude() {
-		return latitude;
-	}
-
-	public void setLatitude(float latitude) {
-		this.latitude = latitude;
-	}
-
-	public float getLongtitude() {
-		return longtitude;
-	}
-
-	public void setLongtitude(float longtitude) {
-		this.longtitude = longtitude;
+	public Location getLocation() {
+		return location;
 	}
 	
 	@Override
