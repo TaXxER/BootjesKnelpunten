@@ -7,12 +7,13 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 
+import config.LocalSettings;
+
 public class DataLoader {
 	// Local settings
-	public static final String filename = "D:\\hackaton\\Ship\\aggregate.txt";
 	public static final String cvsSplitBy = ",";
-	public static final int MAX_NUM_OF_LINES = 5000000;
-	public static final int STATIONARY_DISTANCE = 10;
+	public static final int MAX_NUM_OF_LINES = 20000000;
+	public static final int STATIONARY_DISTANCE = 5;
 	
 	// Define structure of data
 	public static final int structureCodeIndex 	= 0;
@@ -25,7 +26,7 @@ public class DataLoader {
 	public static final String structureCodeWanted = "1";
 		
 	public static void main(String[] args){
-        File file = new File(filename);
+        File file = new File(LocalSettings.AGGREGATE_URL);
         BufferedReader reader = null;
         
         HashMap<Integer, AisData> boatIdToDataPoint = new HashMap<Integer, AisData>();

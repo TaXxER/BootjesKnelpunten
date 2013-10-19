@@ -7,10 +7,10 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import config.LocalSettings;
+
 
 public class main {
-
-	final static File folder = new File("/Users/David/00");
 
 	/**
 	 * @param args
@@ -18,7 +18,6 @@ public class main {
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 //		listFilesForFolder(folder);
-		String csvFile = "/Users/David/aggregate.txt";
 		BufferedReader br = null;
 		String line = "";
 		String cvsSplitBy = ",";
@@ -33,7 +32,7 @@ public class main {
 		
 		try {
 			 
-			br = new BufferedReader(new FileReader(csvFile));
+			br = new BufferedReader(new FileReader(LocalSettings.AGGREGATE_URL));
 			while ((line = br.readLine()) != null) {
 	 
 			        // use comma as separator
