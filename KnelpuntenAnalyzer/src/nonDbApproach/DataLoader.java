@@ -5,15 +5,22 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import config.LocalSettings;
 
 public class DataLoader {
 	// Local settings
 	public static final String cvsSplitBy = ",";
-	public static final int MAX_NUM_OF_LINES = 20000000;
-	public static final int STATIONARY_DISTANCE = 5;
+	public static final int MAX_NUM_OF_LINES = 1000000;
+	public static final double STATIONARY_DISTANCE = 5.0;
+	public static final double SAME_PLACE_THRESHOLD = 10.0;
+	public static final int MAX_OLD_DATAPOINT_MILLIS = 5 * 60 * 1000; // 5 minutes
 	
 	// Define structure of data
 	public static final int structureCodeIndex 	= 0;
@@ -30,7 +37,26 @@ public class DataLoader {
         BufferedReader reader = null;
         
         HashMap<Integer, AisData> boatIdToDataPoint = new HashMap<Integer, AisData>();
+        HashMap<Integer, Integer> boatOccurrences = new HashMap<Integer, Integer>();
         HashMap<Location, Integer> stationaryCount = new HashMap<Location, Integer>();
+    	class ValueComparator implements Comparator<Location> {
+
+    	    Map<Location, Integer> base;
+    	    public ValueComparator(Map<Location, Integer> base) {
+    	        this.base = base;
+    	    }
+
+    	    // Note: this comparator imposes orderings that are inconsistent with equals.    
+    	    public int compare(Location a, Location b) {
+    	        if (base.get(a) >= base.get(b)) {
+    	            return -1;
+    	        } else {
+    	            return 1;
+    	        } // returning 0 would merge keys
+    	    }
+    	}
+        ValueComparator sorter =  new ValueComparator(stationaryCount);
+        TreeMap<Location, Integer> sorted_map = new TreeMap<Location, Integer>(sorter);
         
         // iterator to check progress
         int i = 0;
@@ -43,31 +69,74 @@ public class DataLoader {
             // repeat until all lines is read
             while ((line = reader.readLine()) != null && i<MAX_NUM_OF_LINES) {
             	i++;
-            	if((i % 1000000)==0)
-            		System.out.println("lines read: "+(i/1000000)+"M");
+            	if((i % 100000)==0)
+            		System.out.println("lines read: "+(i/100000)+"M");
             	// split line by comma
             	String[] country = line.split(cvsSplitBy);
             	// only process data points with first attribute = 1
             	if(!country[structureCodeIndex].equals(structureCodeWanted))
             		continue;
             	try{
+            		// Parse data point
             		Integer boatId = Integer.parseInt(country[boatIdIndex]);
+            		Integer occurrences = boatOccurrences.get(boatId)==null ? 0 : boatOccurrences.get(boatId);
+            		boatOccurrences.put(boatId, occurrences+1);
+            		
             		Long timestamp = Long.parseLong(country[timestampIndex]);
             		double latitude = Double.parseDouble(country[latitudeIndex]);
-            		double longtitude = Double.parseDouble(country[longitudeIndex]);
+            		double longitude = Double.parseDouble(country[longitudeIndex]);
+            		Location newLocation = new Location(latitude,longitude);
+            		
+            		// Discard data when in known port
+            		if(newLocation.isPort())
+            			continue;
+            		
             		if(boatIdToDataPoint.containsKey(boatId)){
-            			Location oldLocation = boatIdToDataPoint.get(boatId).getLocation();
-            			Location newLocation = new Location(latitude, longtitude);            			
-            			if(oldLocation.distanceTo(newLocation) < STATIONARY_DISTANCE){
-            				int count = stationaryCount.containsKey(oldLocation) ? stationaryCount.get(oldLocation)+1 : 1;
-            				Location aveLocation = Location.averageLocation(oldLocation, newLocation, count);
-            				stationaryCount.put(aveLocation, count);
-            				stationaryCount.remove(oldLocation);
-            				boatIdToDataPoint.put(boatId, new AisData(timestamp, aveLocation));
-            			}else
-            				boatIdToDataPoint.put(boatId, new AisData(timestamp, newLocation));
+            			AisData oldData = boatIdToDataPoint.get(boatId);
+            			Location oldLocation = oldData.getLocation();
+            			if(oldLocation.distanceTo(newLocation) < STATIONARY_DISTANCE &&
+            			   (timestamp - oldData.getUnixTime()) < MAX_OLD_DATAPOINT_MILLIS){
+            				boolean existingApproximateLocation = false;
+            				
+            				// temp file for stationaryCount, because editing stationaryCount while looping over it throws ConcurrentModificationException exception
+            				HashMap<Location, Integer> stationaryCountTemp = new HashMap<Location, Integer>();
+            				List<Location> stationaryCountRemoveTemp = new ArrayList<Location>();
+            				
+            				for(Location existingLocation: stationaryCount.keySet()){
+            					if(existingLocation.distanceTo(newLocation) < SAME_PLACE_THRESHOLD){
+                    				int count = stationaryCount.get(existingLocation);
+                    				Location aveLocation = Location.averageLocation(existingLocation, newLocation, count);
+                    				stationaryCountTemp.put(aveLocation, count+1);                    				
+                    				stationaryCountRemoveTemp.add(existingLocation);
+                    				existingApproximateLocation = true;
+            					}
+            				}
+            				
+            				// Write stationaryCountTemp to stationaryCount
+            				stationaryCount.putAll(stationaryCountTemp);
+            				for(Location remLoc:stationaryCountRemoveTemp)
+            					stationaryCount.remove(remLoc);
+            				
+            				if(!existingApproximateLocation){
+            					stationaryCount.put(newLocation, 1);
+            				}
+            			}
+            			// Overwrite value in map with new timestamp/location
+            			boatIdToDataPoint.put(boatId, new AisData(timestamp, newLocation));
             		}else
-            			boatIdToDataPoint.put(boatId, new AisData(timestamp, new Location(latitude, longtitude)));
+            			// Add timestamp/location of new boat to map
+            			boatIdToDataPoint.put(boatId, new AisData(timestamp, newLocation));
+            		
+            		// temp file for stationaryCount, because editing stationaryCount while looping over it throws ConcurrentModificationException exception
+    				HashMap<Location, Integer> stationaryCountTemp = new HashMap<Location, Integer>();
+    				List<Location> stationaryCountRemoveTemp = new ArrayList<Location>();
+            		
+    				// Write stationaryCountTemp to stationaryCount
+    				stationaryCount.putAll(stationaryCountTemp);
+    				for(Location remLoc:stationaryCountRemoveTemp)
+    					stationaryCount.remove(remLoc);
+            		
+            		
             	}catch(NumberFormatException e){
             		// data set contains dirty data points catching prevents
             		// data loader from breaking on these rows
@@ -80,9 +149,8 @@ public class DataLoader {
         	e.printStackTrace();
         }
         
-        // Test boatIdToDataPoints multimap
-        for(Location loc: stationaryCount.keySet()){
-        	System.out.println("key: "+loc+", value: "+stationaryCount.get(loc));
-        }
+        sorted_map.putAll(stationaryCount);
+        System.out.println(sorted_map);
 	}
+
 }

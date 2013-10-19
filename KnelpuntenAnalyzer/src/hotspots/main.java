@@ -56,7 +56,7 @@ public class main {
 				}
 				
 				lineCount++;
-				if(lineCount%10000 == 0){
+				if(lineCount%1000000 == 0){
 					System.out.println(lineCount);
 				}
 	 
