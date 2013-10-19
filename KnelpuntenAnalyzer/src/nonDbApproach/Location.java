@@ -1,12 +1,16 @@
 package nonDbApproach;
 
+import java.text.NumberFormat;
+
 public class Location {
 	private double latitude;
 	private double longitude;
 	
 	public Location(double latitude, double longtitude){
-		this.latitude 	= latitude;
-		this.longitude = longtitude;
+		NumberFormat nf = NumberFormat.getNumberInstance();
+		nf.setMaximumFractionDigits(4);
+		this.latitude  = Double.parseDouble(nf.format(latitude));
+		this.longitude = Double.parseDouble(nf.format(longtitude));
 	}
 
 	public double getLatitude(){
@@ -46,12 +50,19 @@ public class Location {
 			longitude > 4.7184130 &&
 			longitude < 5.0548700)
 				return true;
-		// Ijmuiden
+		// IJmuiden
 		if( latitude  > 52.438432 && 
 			latitude  < 52.498668 &&
 			longitude > 4.5192860 &&
 			longitude < 4.7184130)
 				return true;
+		// Harlingen
+		if( latitude  > 53.169543 &&
+			latitude  < 53.183510 &&
+			longitude > 5.403187  &&
+			longitude < 5.418785)
+				return true;
+		
 		// When no port applies
 		return false;
 	}

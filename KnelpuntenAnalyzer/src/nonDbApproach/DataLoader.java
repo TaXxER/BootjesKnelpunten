@@ -106,9 +106,20 @@ public class DataLoader {
             					if(existingLocation.distanceTo(newLocation) < SAME_PLACE_THRESHOLD){
                     				int count = stationaryCount.get(existingLocation);
                     				Location aveLocation = Location.averageLocation(existingLocation, newLocation, count);
-                    				stationaryCountTemp.put(aveLocation, count+1);                    				
-                    				stationaryCountRemoveTemp.add(existingLocation);
-                    				existingApproximateLocation = true;
+                    				
+                    				boolean existingApproximateLocation2 = false;
+                    				for(Location existingLocation2: stationaryCount.keySet()){
+                    					if(existingLocation2.distanceTo(aveLocation) <SAME_PLACE_THRESHOLD){
+                    						stationaryCount.put(existingLocation2, stationaryCount.get(existingLocation2)+1);
+                    						existingApproximateLocation2 = true;
+                    					}
+                    				}
+                    				
+                    				if(existingApproximateLocation2){
+                    					stationaryCountTemp.put(aveLocation, count+1);                    				
+                    					stationaryCountRemoveTemp.add(existingLocation);
+                    					existingApproximateLocation = true;
+                    				}
             					}
             				}
             				
